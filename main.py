@@ -1,11 +1,32 @@
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import secrets
 import requests
-import urllib.parse
 from datetime import datetime
 from supabase import create_client, Client
 
 app = FastAPI()
+
+# Libera a pasta 'static' para servir arquivos (como a logo)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Segurança do Painel Admin
+security = HTTPBasic()
+ADMIN_USER = "admin"
+ADMIN_PASS = "techdhan2026" # Altere se desejar
+
+def verificar_senha(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, ADMIN_USER)
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASS)
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais incorretas",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 # 1. CONFIGURAÇÕES DO SUPABASE
 SUPABASE_URL = "https://fqvxitiwhwcpiiertiyr.supabase.co"
@@ -14,8 +35,8 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 2. CONFIGURAÇÕES DO TELEGRAM
-TELEGRAM_BOT_TOKEN = "9063674052:AAHNqqnqZAOoIDChjAeGwckyy5ZP2Onb5v0" # (Mantenha o seu token atual)
-TELEGRAM_CHAT_ID = "6326233839" # (Mantenha o seu chat_id atual)
+TELEGRAM_BOT_TOKEN = "9063674052:AAHNqqnqZAOoIDChjAeGwckyy5ZP2Onb5v0"
+TELEGRAM_CHAT_ID = "6326233839"
 
 def enviar_telegram(mensagem):
     try:
@@ -37,32 +58,31 @@ def index():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Suporte Técnico - Abertura de Chamado</title>
+        <title>TechDhan - Suporte de TI</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
-            .container { max-width: 480px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin: auto; }
-            .header { text-align: center; margin-bottom: 25px; }
-            .header svg { width: 48px; height: 48px; color: #007bff; margin-bottom: 10px; }
-            h2 { color: #1a1a1a; margin: 0; font-size: 22px; }
-            p.subtitle { color: #666; font-size: 14px; margin-top: 5px; }
-            label { display: block; margin-top: 15px; font-weight: 600; font-size: 13px; color: #444; }
-            input, select, textarea { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; background: #f9fafb; font-size: 14px; transition: border 0.2s; }
-            input:focus, select:focus, textarea:focus { border-color: #007bff; outline: none; background: #fff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
-            button { width: 100%; background: #007bff; color: white; border: none; padding: 12px; margin-top: 20px; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-            button:hover { background: #0056b3; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; padding: 20px; color: #f8fafc; }
+            .container { max-width: 480px; background: #1e293b; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin: auto; border: 1px solid #334155; text-align: center; }
+            .header { margin-bottom: 25px; }
+            .logo-img { max-width: 200px; width: 100%; height: auto; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid #475569; }
+            h2 { color: #f8fafc; margin: 0; font-size: 22px; font-weight: 700; }
+            p.subtitle { color: #94a3b8; font-size: 11px; margin-top: 6px; line-height: 1.4; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+            form { text-align: left; }
+            label { display: block; margin-top: 15px; font-weight: 600; font-size: 13px; color: #cbd5e1; }
+            input, select, textarea { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; background: #0f172a; color: #f8fafc; font-size: 14px; transition: border 0.2s; }
+            input:focus, select:focus, textarea:focus { border-color: #38bdf8; outline: none; box-shadow: 0 0 0 3px rgba(56,189,248,0.15); }
+            button { width: 100%; background: #0284c7; color: white; border: none; padding: 12px; margin-top: 20px; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+            button:hover { background: #0369a1; }
             .footer-links { text-align: center; margin-top: 20px; font-size: 13px; }
-            .footer-links a { color: #007bff; text-decoration: none; }
+            .footer-links a { color: #38bdf8; text-decoration: none; }
             .footer-links a:hover { text-decoration: underline; }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.83-5.83m-3.75 3.75l-3.5-3.5a2.121 2.121 0 013-3l3.5 3.5m-3.75 3.75l6.5-6.5m-11.5 8.5l3.5-3.5" />
-                </svg>
-                <h2>Central de Suporte TI</h2>
-                <p class="subtitle">Preencha os dados abaixo para abrir sua solicitação</p>
+                <img src="/static/logo.jpg" alt="TechDhan Logo" class="logo-img">
+                <h2>TECHDHAN</h2>
+                <p class="subtitle">Suporte de TI, Manutenção de Computadores e Assistência Técnica</p>
             </div>
             <form action="/enviar" method="POST">
                 <label>Seu Nome / Setor:</label>
@@ -135,25 +155,25 @@ def receber_chamado(solicitante: str = Form(...), telefone: str = Form(...), cat
     )
     enviar_telegram(aviso_tecnico)
     
-    return f"""
+    return """
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
         <meta charset="UTF-8">
         <title>Chamado Enviado</title>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; text-align: center; padding: 50px; }}
-            .card {{ background: white; max-width: 420px; margin: auto; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }}
-            h2 {{ color: #16a34a; margin-top: 15px; }}
-            p {{ color: #555; font-size: 14px; line-height: 1.5; }}
-            a {{ display: inline-block; margin-top: 20px; color: #007bff; text-decoration: none; font-weight: 600; }}
-            a:hover {{ text-decoration: underline; }}
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; text-align: center; padding: 50px; color: #f8fafc; }
+            .card { background: #1e293b; max-width: 420px; margin: auto; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid #334155; }
+            h2 { color: #4ade80; margin-top: 15px; }
+            p { color: #94a3b8; font-size: 14px; line-height: 1.5; }
+            a { display: inline-block; margin-top: 20px; color: #38bdf8; text-decoration: none; font-weight: 600; }
+            a:hover { text-decoration: underline; }
         </style>
     </head>
     <body>
         <div class="card">
             <h2>Chamado Registrado!</h2>
-            <p>Sua solicitação foi enviada com sucesso às <b>{horario_atual}</b>. Nossa equipe foi notificada e em breve entrará em contato.</p>
+            <p>Sua solicitação foi enviada com sucesso. Nossa equipe foi notificada e em breve entrará em contato.</p>
             <a href="/">&larr; Abrir outro chamado</a>
         </div>
     </body>
@@ -161,7 +181,7 @@ def receber_chamado(solicitante: str = Form(...), telefone: str = Form(...), cat
     """
 
 @app.get("/admin", response_class=HTMLResponse)
-def painel_admin():
+def painel_admin(username: str = Depends(verificar_senha)):
     resposta = supabase.table("chamados").select("*").order("id", desc=True).execute()
     chamados_db = resposta.data if resposta.data else []
 
@@ -175,13 +195,13 @@ def painel_admin():
         if "Aberto" in status_atual:
             botao_concluir = f'<a href="/concluir/{c_id}" style="background: #16a34a; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: 600;">Concluir</a>'
         else:
-            botao_concluir = '<span style="color: #888; font-size: 12px;">Finalizado</span>'
+            botao_concluir = '<span style="color: #94a3b8; font-size: 12px;">Finalizado</span>'
             
         linhas_tabela += f"""
-        <tr style="border-bottom: 1px solid #e5e7eb;">
+        <tr style="border-bottom: 1px solid #334155;">
             <td style="padding: 12px; font-weight: bold;">#{c_id}</td>
             <td style="padding: 12px;">{c.get('horario')}<br><b>{c.get('solicitante')}</b></td>
-            <td style="padding: 12px;">{c.get('categoria')}<br><small style="color:#666;">{c.get('descricao')}</small></td>
+            <td style="padding: 12px;">{c.get('categoria')}<br><small style="color:#94a3b8;">{c.get('descricao')}</small></td>
             <td style="padding: 12px;">{prio}</td>
             <td style="padding: 12px;">{status_atual}</td>
             <td style="padding: 12px; text-align: center;">{botao_concluir}</td>
@@ -189,7 +209,7 @@ def painel_admin():
         """
         
     if not linhas_tabela:
-        linhas_tabela = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #666;">Nenhum chamado registrado ainda.</td></tr>'
+        linhas_tabela = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #94a3b8;">Nenhum chamado registrado ainda.</td></tr>'
 
     return f"""
     <!DOCTYPE html>
@@ -197,21 +217,21 @@ def painel_admin():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Painel do Técnico - Chamados TI</title>
+        <title>Painel do Técnico - TechDhan</title>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; }}
-            .container {{ max-width: 950px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin: auto; }}
-            h2 {{ color: #1a1a1a; text-align: center; margin-bottom: 20px; }}
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; padding: 20px; color: #f8fafc; }}
+            .container {{ max-width: 950px; background: #1e293b; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin: auto; border: 1px solid #334155; }}
+            h2 {{ color: #f8fafc; text-align: center; margin-bottom: 20px; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }}
-            th {{ background: #007bff; color: white; padding: 12px; text-align: left; font-size: 13px; }}
-            .voltar {{ display: inline-block; margin-bottom: 15px; color: #007bff; text-decoration: none; font-weight: 600; }}
+            th {{ background: #0284c7; color: white; padding: 12px; text-align: left; font-size: 13px; }}
+            .voltar {{ display: inline-block; margin-bottom: 15px; color: #38bdf8; text-decoration: none; font-weight: 600; }}
             .voltar:hover {{ text-decoration: underline; }}
         </style>
     </head>
     <body>
         <div class="container">
             <a href="/" class="voltar">&larr; Voltar ao Formulário</a>
-            <h2>Painel de Controle - Chamados de TI</h2>
+            <h2>Painel de Controle - TechDhan (Técnico)</h2>
             <table>
                 <thead>
                     <tr>
@@ -233,6 +253,6 @@ def painel_admin():
     """
 
 @app.get("/concluir/{ticket_id}")
-def concluir_chamado(ticket_id: int):
+def concluir_chamado(ticket_id: int, username: str = Depends(verificar_senha)):
     supabase.table("chamados").update({"status": "🟢 Concluído"}).eq("id", ticket_id).execute()
     return RedirectResponse(url="/admin", status_code=303)
