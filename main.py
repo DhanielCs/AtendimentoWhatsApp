@@ -36,8 +36,8 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 2. CONFIGURAÇÕES DO TELEGRAM
-TELEGRAM_BOT_TOKEN = "9063674052:AAHNqqnqZAOoIDChjAeGwckyy5ZP2Onb5v0"
-TELEGRAM_CHAT_ID = "6326233839"
+TELEGRAM_BOT_TOKEN = "7575317781:AAFFZ-jYnIqL_HnL7v_exemplo_token"
+TELEGRAM_CHAT_ID = "123456789"
 
 def enviar_telegram(mensagem):
     try:
@@ -195,23 +195,27 @@ def painel_admin(username: str = Depends(verificar_senha)):
         prio = c.get('prioridade', 'Normal')
         status_atual = c.get('status', '🔴 Aberto')
         
-        # Cria a mensagem personalizada para o WhatsApp do cliente
-        mensagem_zap = f"Olá {solicitante}, aqui é da TechDhan! Recebemos o seu chamado sobre *{categoria}* (Prioridade: {prio}) e já estamos verificando. Em breve daremos retorno!"
-        mensagem_codificada = urllib.parse.quote(mensagem_zap)
-        
-        # Limpa o telefone para garantir apenas números (remove traços, espaços, parênteses)
+        # Limpa o telefone para garantir apenas números
         telefone_limpo = "".join(filter(str.isdigit, str(telefone)))
         
-        # Botões de Ação (WhatsApp + Concluir)
         botoes_acao = f'<div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">'
         
         if telefone_limpo:
-            botoes_acao += f'<a href="https://wa.me/{telefone_limpo}?text={mensagem_codificada}" target="_blank" style="background: #25d366; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">WhatsApp</a>'
+            if "Aberto" in status_atual:
+                # Mensagem inicial de atendimento
+                msg_inicio = f"Olá {solicitante}, aqui é da TechDhan! Recebemos o seu chamado sobre *{categoria}* (Prioridade: {prio}) e já estamos verificando. Em breve daremos retorno!"
+                link_whatsapp = f"https://wa.me/{telefone_limpo}?text={urllib.parse.quote(msg_inicio)}"
+                botoes_acao += f'<a href="{link_whatsapp}" target="_blank" style="background: #25d366; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">WhatsApp</a>'
+            else:
+                # Mensagem de encerramento / pós-atendimento
+                msg_fim = f"Olá {solicitante}, o seu chamado #{c_id} sobre *{categoria}* foi concluído com sucesso pela TechDhan! Ficou tudo certinho por aí?"
+                link_whatsapp_fim = f"https://wa.me/{telefone_limpo}?text={urllib.parse.quote(msg_fim)}"
+                botoes_acao += f'<a href="{link_whatsapp_fim}" target="_blank" style="background: #25d366; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">Avisar Fim</a>'
         
         if "Aberto" in status_atual:
             botoes_acao += f'<a href="/concluir/{c_id}" style="background: #16a34a; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">Concluir</a>'
         else:
-            botoes_acao += '<span style="color: #94a3b8; font-size: 11px;">Finalizado</span>'
+            botoes_acao += '<span style="color: #4ade80; font-size: 11px; font-weight: 600;">Finalizado</span>'
             
         botoes_acao += '</div>'
             
