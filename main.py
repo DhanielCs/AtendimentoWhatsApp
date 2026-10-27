@@ -80,7 +80,7 @@ def index():
     <body>
         <div class="container">
             <div class="header">
-                <img src="/static/logo.jpg" alt="TechDhan Logo" class="logo-img">
+                <img src="/static/logo.png" alt="TechDhan Logo" class="logo-img">
                 <h2>TECHDHAN</h2>
                 <p class="subtitle">Suporte de TI, Manutenção de Computadores e Assistência Técnica</p>
             </div>
