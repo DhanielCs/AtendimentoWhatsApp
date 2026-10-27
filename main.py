@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import secrets
 import requests
+import urllib.parse
 from datetime import datetime
 from supabase import create_client, Client
 
@@ -80,7 +81,7 @@ def index():
     <body>
         <div class="container">
             <div class="header">
-                <img src="/static/logo.png" alt="TechDhan Logo" class="logo-img">
+                <img src="/static/logo.jpg" alt="TechDhan Logo" class="logo-img">
                 <h2>TECHDHAN</h2>
                 <p class="subtitle">Suporte de TI, Manutenção de Computadores e Assistência Técnica</p>
             </div>
@@ -187,24 +188,41 @@ def painel_admin(username: str = Depends(verificar_senha)):
 
     linhas_tabela = ""
     for c in chamados_db:
-        botao_concluir = ""
-        status_atual = c.get('status', '🔴 Aberto')
         c_id = c.get('id')
+        solicitante = c.get('solicitante', '')
+        telefone = c.get('telefone', '')
+        categoria = c.get('categoria', '')
         prio = c.get('prioridade', 'Normal')
+        status_atual = c.get('status', '🔴 Aberto')
+        
+        # Cria a mensagem personalizada para o WhatsApp do cliente
+        mensagem_zap = f"Olá {solicitante}, aqui é da TechDhan! Recebemos o seu chamado sobre *{categoria}* (Prioridade: {prio}) e já estamos verificando. Em breve daremos retorno!"
+        mensagem_codificada = urllib.parse.quote(mensagem_zap)
+        
+        # Limpa o telefone para garantir apenas números (remove traços, espaços, parênteses)
+        telefone_limpo = "".join(filter(str.isdigit, str(telefone)))
+        
+        # Botões de Ação (WhatsApp + Concluir)
+        botoes_acao = f'<div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">'
+        
+        if telefone_limpo:
+            botoes_acao += f'<a href="https://wa.me/{telefone_limpo}?text={mensagem_codificada}" target="_blank" style="background: #25d366; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">WhatsApp</a>'
         
         if "Aberto" in status_atual:
-            botao_concluir = f'<a href="/concluir/{c_id}" style="background: #16a34a; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: 600;">Concluir</a>'
+            botoes_acao += f'<a href="/concluir/{c_id}" style="background: #16a34a; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">Concluir</a>'
         else:
-            botao_concluir = '<span style="color: #94a3b8; font-size: 12px;">Finalizado</span>'
+            botoes_acao += '<span style="color: #94a3b8; font-size: 11px;">Finalizado</span>'
+            
+        botoes_acao += '</div>'
             
         linhas_tabela += f"""
         <tr style="border-bottom: 1px solid #334155;">
             <td style="padding: 12px; font-weight: bold;">#{c_id}</td>
-            <td style="padding: 12px;">{c.get('horario')}<br><b>{c.get('solicitante')}</b></td>
-            <td style="padding: 12px;">{c.get('categoria')}<br><small style="color:#94a3b8;">{c.get('descricao')}</small></td>
+            <td style="padding: 12px;">{c.get('horario')}<br><b>{solicitante}</b><br><small style="color:#94a3b8;">📱 {telefone}</small></td>
+            <td style="padding: 12px;">{categoria}<br><small style="color:#94a3b8;">{c.get('descricao')}</small></td>
             <td style="padding: 12px;">{prio}</td>
             <td style="padding: 12px;">{status_atual}</td>
-            <td style="padding: 12px; text-align: center;">{botao_concluir}</td>
+            <td style="padding: 12px; text-align: center;">{botoes_acao}</td>
         </tr>
         """
         
@@ -220,7 +238,7 @@ def painel_admin(username: str = Depends(verificar_senha)):
         <title>Painel do Técnico - TechDhan</title>
         <style>
             body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; padding: 20px; color: #f8fafc; }}
-            .container {{ max-width: 950px; background: #1e293b; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin: auto; border: 1px solid #334155; }}
+            .container {{ max-width: 1050px; background: #1e293b; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin: auto; border: 1px solid #334155; }}
             h2 {{ color: #f8fafc; text-align: center; margin-bottom: 20px; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }}
             th {{ background: #0284c7; color: white; padding: 12px; text-align: left; font-size: 13px; }}
@@ -236,11 +254,11 @@ def painel_admin(username: str = Depends(verificar_senha)):
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Horário / Solicitante</th>
+                        <th>Horário / Solicitante / Tel</th>
                         <th>Detalhes</th>
                         <th>Prioridade</th>
                         <th>Status</th>
-                        <th style="text-align: center;">Ação</th>
+                        <th style="text-align: center;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
