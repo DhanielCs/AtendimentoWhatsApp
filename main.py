@@ -36,8 +36,8 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 2. CONFIGURAÇÕES DO TELEGRAM
-TELEGRAM_BOT_TOKEN = "7575317781:AAFFZ-jYnIqL_HnL7v_exemplo_token"
-TELEGRAM_CHAT_ID = "123456789"
+TELEGRAM_BOT_TOKEN = "9063674052:AAHNqqnqZAOoIDChjAeGwckyy5ZP2Onb5v0"
+TELEGRAM_CHAT_ID = "6326233839"
 
 def enviar_telegram(mensagem):
     try:
@@ -50,6 +50,13 @@ def enviar_telegram(mensagem):
         requests.post(url, json=payload, timeout=5)
     except Exception as e:
         print(f"Erro Telegram: {e}")
+
+def formatar_telefone(tel_str):
+    """Garante que o telefone tenha apenas números e inclua o 55 do Brasil se faltar"""
+    apenas_nums = "".join(filter(str.isdigit, str(tel_str)))
+    if len(apenas_nums) in [10, 11]:  # Ex: 99988887777 ou 999988887777 (sem o 55)
+        apenas_nums = "55" + apenas_nums
+    return apenas_nums
 
 @app.get("/", response_class=HTMLResponse)
 def index():
@@ -89,8 +96,8 @@ def index():
                 <label>Seu Nome / Setor:</label>
                 <input type="text" name="solicitante" required placeholder="Ex: Recepção - Consultório 02">
                 
-                <label>Seu WhatsApp (para contato):</label>
-                <input type="text" name="telefone" required placeholder="Ex: 5599988887777">
+                <label>Seu WhatsApp (com DDD):</label>
+                <input type="text" name="telefone" required placeholder="Ex: 99 98888-7777">
                 
                 <label>Categoria do Problema:</label>
                 <select name="categoria" required>
@@ -129,9 +136,12 @@ def index():
 def receber_chamado(solicitante: str = Form(...), telefone: str = Form(...), categoria: str = Form(...), prioridade: str = Form(...), descricao: str = Form(...)):
     horario_atual = datetime.now().strftime("%d/%m/%Y às %H:%M")
     
+    # Formata o telefone automaticamente incluindo o 55 se o usuário digitar apenas DDD + Número
+    telefone_formatado = formatar_telefone(telefone)
+    
     dados_novo = {
         "solicitante": solicitante,
-        "telefone": telefone,
+        "telefone": telefone_formatado,
         "categoria": categoria,
         "prioridade": prioridade,
         "descricao": descricao,
@@ -148,7 +158,7 @@ def receber_chamado(solicitante: str = Form(...), telefone: str = Form(...), cat
     aviso_tecnico = (
         f"🔔 *NOVO CHAMADO #{ticket_id}!*\n\n"
         f"👤 *Solicitante:* {solicitante}\n"
-        f"📱 *WhatsApp:* {telefone}\n"
+        f"📱 *WhatsApp:* {telefone_formatado}\n"
         f"🔧 *Categoria:* {categoria}\n"
         f"⚡ *Prioridade:* {prioridade}\n"
         f"⏰ *Horário:* {horario_atual}\n"
@@ -174,7 +184,7 @@ def receber_chamado(solicitante: str = Form(...), telefone: str = Form(...), cat
     <body>
         <div class="card">
             <h2>Chamado Registrado!</h2>
-            <p>Sua solicitação foi enviada com sucesso. Nossa equipe foi notificada e em breve entrará em contato.</p>
+            <p>Sua solicitação foi enviada com sucesso. Nossa equipe foi notificadora e em breve entrará em contato.</p>
             <a href="/">&larr; Abrir outro chamado</a>
         </div>
     </body>
@@ -195,19 +205,17 @@ def painel_admin(username: str = Depends(verificar_senha)):
         prio = c.get('prioridade', 'Normal')
         status_atual = c.get('status', '🔴 Aberto')
         
-        # Limpa o telefone para garantir apenas números
-        telefone_limpo = "".join(filter(str.isdigit, str(telefone)))
+        # Garante a formatação correta do telefone ao gerar o link do WhatsApp
+        telefone_limpo = formatar_telefone(telefone)
         
         botoes_acao = f'<div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">'
         
         if telefone_limpo:
             if "Aberto" in status_atual:
-                # Mensagem inicial de atendimento
                 msg_inicio = f"Olá {solicitante}, aqui é da TechDhan! Recebemos o seu chamado sobre *{categoria}* (Prioridade: {prio}) e já estamos verificando. Em breve daremos retorno!"
                 link_whatsapp = f"https://wa.me/{telefone_limpo}?text={urllib.parse.quote(msg_inicio)}"
                 botoes_acao += f'<a href="{link_whatsapp}" target="_blank" style="background: #25d366; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">WhatsApp</a>'
             else:
-                # Mensagem de encerramento / pós-atendimento
                 msg_fim = f"Olá {solicitante}, o seu chamado #{c_id} sobre *{categoria}* foi concluído com sucesso pela TechDhan! Ficou tudo certinho por aí?"
                 link_whatsapp_fim = f"https://wa.me/{telefone_limpo}?text={urllib.parse.quote(msg_fim)}"
                 botoes_acao += f'<a href="{link_whatsapp_fim}" target="_blank" style="background: #25d366; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">Avisar Fim</a>'
