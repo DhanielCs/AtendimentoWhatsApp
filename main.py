@@ -45,7 +45,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 2. CONFIGURAÇÕES DO TELEGRAM
 TELEGRAM_BOT_TOKEN = "9063674052:AAHNqqnqZAOoIDChjAeGwckyy5ZP2Onb5v0"
-TELEGRAM_CHAT_ID = " 6326233839"
+TELEGRAM_CHAT_ID = "6326233839"
 
 def enviar_telegram(mensagem):
     try:
